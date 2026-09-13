@@ -10,6 +10,10 @@ int main() {
 
 	Rasterizer rasterizer(window.getFrameBuffer());
 
+	glm::vec2 v1(100, 100);
+	glm::vec2 v2(400, 100);
+	glm::vec2 v3(100, 400);
+
 	uint64_t lastTime = SDL_GetTicksNS();
 	int frames = 0;
 	float counter = 0;
@@ -32,6 +36,7 @@ int main() {
 		window.pollEvents();
 
 		rasterizer.clear(0xFFFFFFFF);
+		rasterizer.drawTriangle(v1, v2, v3, 0x00FFFFFF);
 
 		window.render();
 	}

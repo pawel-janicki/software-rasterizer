@@ -15,7 +15,14 @@ FetchContent_Declare(
 	GIT_TAG        release-3.4.16
 )
 
+FetchContent_Declare(
+	glm
+	GIT_REPOSITORY https://github.com/g-truc/glm.git
+	GIT_TAG        1.0.3
+)
+
 FetchContent_MakeAvailable(SDL3)
+FetchContent_MakeAvailable(glm)
 
 add_executable(software_rasterizer
 	src/main.cpp
@@ -27,3 +34,4 @@ add_executable(software_rasterizer
 	src/renderer/Rasterizer.h
 )
 target_link_libraries(software_rasterizer PRIVATE SDL3::SDL3)
+target_link_libraries(software_rasterizer PRIVATE glm::glm)
