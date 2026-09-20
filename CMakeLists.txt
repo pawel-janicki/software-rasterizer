@@ -32,6 +32,8 @@ add_executable(software_rasterizer
 	src/renderer/FrameBuffer.h
 	src/renderer/Rasterizer.cpp
 	src/renderer/Rasterizer.h
+	src/renderer/Attribute.h
+	src/renderer/Mesh.h
 )
 target_link_libraries(software_rasterizer PRIVATE SDL3::SDL3)
 target_link_libraries(software_rasterizer PRIVATE glm::glm)

@@ -2,6 +2,8 @@
 
 #include "renderer/Rasterizer.h"
 #include "platform/Window.h"
+#include "renderer/Attribute.h"
+#include "renderer/Mesh.h"
 #include "SDL3/SDL_timer.h"
 
 int main() {
@@ -10,9 +12,13 @@ int main() {
 
 	Rasterizer rasterizer(window.getFrameBuffer());
 
-	glm::vec2 v1(100, 100);
-	glm::vec2 v2(400, 100);
-	glm::vec2 v3(100, 400);
+	rasterizer.setFragmentShader([](glm::vec4 color) {
+		return color;
+	});
+
+	Attribute positions(std::vector<float>{100, 100, 1180, 100, 100, 620, 100, 620, 1180, 100, 1180, 620});
+	Attribute colors(std::vector<float>{1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1});
+	Mesh mesh({positions, colors});
 
 	uint64_t lastTime = SDL_GetTicksNS();
 	int frames = 0;
@@ -36,7 +42,7 @@ int main() {
 		window.pollEvents();
 
 		rasterizer.clear(0xFFFFFFFF);
-		rasterizer.drawTriangle(v1, v2, v3, 0x00FFFFFF);
+		rasterizer.drawMesh(mesh);
 
 		window.render();
 	}
