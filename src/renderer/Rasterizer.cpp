@@ -4,7 +4,6 @@
 
 #include <algorithm>
 
-#include "glm/packing.hpp"
 #include "glm/gtx/exterior_product.hpp"
 
 Rasterizer::Rasterizer(FrameBuffer &frameBuffer) : frameBuffer(frameBuffer) { }
@@ -22,16 +21,41 @@ void Rasterizer::setPixel(int x, int y, glm::vec4 color) const {
 	frameBuffer.data[y * frameBuffer.width + x] = (r << 24) | (g << 16) | (b << 8) | a;
 }
 
-void Rasterizer::drawMesh(Mesh& mesh) const {
-	int vertexCount = static_cast<int>(mesh.attributes[0].data.size() / (3 * 2));
-	for (int i = 0; i < vertexCount; i++) {
-		glm::vec2 v0(mesh.attributes[0].data[i * 6 + 0], mesh.attributes[0].data[i * 6 + 1]);
-		glm::vec2 v1(mesh.attributes[0].data[i * 6 + 2], mesh.attributes[0].data[i * 6 + 3]);
-		glm::vec2 v2(mesh.attributes[0].data[i * 6 + 4], mesh.attributes[0].data[i * 6 + 5]);
+void Rasterizer::drawMesh(const Mesh& mesh, int triangleCount) const {
+	for (int i = 0; i < triangleCount; i++) {
+		std::vector<AttributeValue> v0Attributes;
+		std::vector<AttributeValue> v1Attributes;
+		std::vector<AttributeValue> v2Attributes;
 
-		glm::vec4 color0(mesh.attributes[1].data[i * 12 + 0], mesh.attributes[1].data[i * 12 + 1], mesh.attributes[1].data[i * 12 + 2], mesh.attributes[1].data[i * 12 + 3]);
-		glm::vec4 color1(mesh.attributes[1].data[i * 12 + 4], mesh.attributes[1].data[i * 12 + 5], mesh.attributes[1].data[i * 12 + 6], mesh.attributes[1].data[i * 12 + 7]);
-		glm::vec4 color2(mesh.attributes[1].data[i * 12 + 8], mesh.attributes[1].data[i * 12 + 9], mesh.attributes[1].data[i * 12 + 10], mesh.attributes[1].data[i * 12 + 11]);
+		for (const Attribute& attribute : mesh.attributes) {
+			int baseIndex = i * 3 * attribute.dimensions;
+
+			if (attribute.dimensions == 1) {
+				v0Attributes.emplace_back(attribute.data[baseIndex]);
+				v1Attributes.emplace_back(attribute.data[baseIndex + 1]);
+				v2Attributes.emplace_back(attribute.data[baseIndex + 2]);
+			} else if (attribute.dimensions == 2) {
+				v0Attributes.emplace_back(glm::vec2(attribute.data[baseIndex], attribute.data[baseIndex + 1]));
+				v1Attributes.emplace_back(glm::vec2(attribute.data[baseIndex + 2], attribute.data[baseIndex + 3]));
+				v2Attributes.emplace_back(glm::vec2(attribute.data[baseIndex + 4], attribute.data[baseIndex + 5]));
+			} else if (attribute.dimensions == 3) {
+				v0Attributes.emplace_back(glm::vec3(attribute.data[baseIndex], attribute.data[baseIndex + 1], attribute.data[baseIndex + 2]));
+				v1Attributes.emplace_back(glm::vec3(attribute.data[baseIndex + 3], attribute.data[baseIndex + 4], attribute.data[baseIndex + 5]));
+				v2Attributes.emplace_back(glm::vec3(attribute.data[baseIndex + 6], attribute.data[baseIndex + 7], attribute.data[baseIndex + 8]));
+			} else if (attribute.dimensions == 4) {
+				v0Attributes.emplace_back(glm::vec4(attribute.data[baseIndex], attribute.data[baseIndex + 1], attribute.data[baseIndex + 2], attribute.data[baseIndex + 3]));
+				v1Attributes.emplace_back(glm::vec4(attribute.data[baseIndex + 4], attribute.data[baseIndex + 5], attribute.data[baseIndex + 6], attribute.data[baseIndex + 7]));
+				v2Attributes.emplace_back(glm::vec4(attribute.data[baseIndex + 8], attribute.data[baseIndex + 9], attribute.data[baseIndex + 10], attribute.data[baseIndex + 11]));
+			}
+		}
+
+		VertexShaderOutput v0Output = vertexShader(v0Attributes);
+		VertexShaderOutput v1Output = vertexShader(v1Attributes);
+		VertexShaderOutput v2Output = vertexShader(v2Attributes);
+
+		glm::vec2 v0 = v0Output.position;
+		glm::vec2 v1 = v1Output.position;
+		glm::vec2 v2 = v2Output.position;
 
 		int minX = std::max(0, static_cast<int>(std::min({v0.x, v1.x, v2.x})));
 		int maxX = std::min(frameBuffer.getWidth(), static_cast<int>(std::max({v0.x, v1.x, v2.x})));
@@ -42,9 +66,11 @@ void Rasterizer::drawMesh(Mesh& mesh) const {
 		bool ccw = det012 < 0;
 		if (ccw) {
 			std::swap(v1, v2);
-			std::swap(color1, color2);
+			std::swap(v1Output.attributes, v2Output.attributes);
 			det012 = -det012;
 		}
+
+		std::vector<AttributeValue> fragmentAttributes(v0Output.attributes.size());
 
 		for (int y = minY; y < maxY; y++) {
 			for (int x = minX; x < maxX; x++) {
@@ -59,13 +85,33 @@ void Rasterizer::drawMesh(Mesh& mesh) const {
 					float l1 = det20 / det012;
 					float l2 = det01 / det012;
 
-					setPixel(x, y, fragmentShader(color0 * l0 + color1 * l1 + color2 * l2));
+					for (int j = 0; j < v0Output.attributes.size(); j++) {
+						fragmentAttributes[j] = interpolateAttribute(v0Output.attributes[j], v1Output.attributes[j], v2Output.attributes[j], l0, l1, l2);
+					}
+
+					setPixel(x, y, fragmentShader(fragmentAttributes));
 				}
 			}
 		}
 	}
 }
 
-void Rasterizer::setFragmentShader(std::function<glm::vec4(glm::vec4 color)> fragmentShader) {
+AttributeValue Rasterizer::interpolateAttribute(const AttributeValue& v0, const AttributeValue& v1, const AttributeValue& v2, float l0, float l1, float l2) const {
+	if (v0.index() == 0) {
+		return std::get<float>(v0) * l0 + std::get<float>(v1) * l1 + std::get<float>(v2) * l2;
+	} else if (v0.index() == 1) {
+		return std::get<glm::vec2>(v0) * l0 + std::get<glm::vec2>(v1) * l1 + std::get<glm::vec2>(v2) * l2;
+	} else if (v0.index() == 2) {
+		return std::get<glm::vec3>(v0) * l0 + std::get<glm::vec3>(v1) * l1 + std::get<glm::vec3>(v2) * l2;
+	}
+
+	return std::get<glm::vec4>(v0) * l0 + std::get<glm::vec4>(v1) * l1 + std::get<glm::vec4>(v2) * l2;
+}
+
+void Rasterizer::setVertexShader(std::function<VertexShaderOutput(const std::vector<AttributeValue>&)> vertexShader) {
+	this->vertexShader = vertexShader;
+}
+
+void Rasterizer::setFragmentShader(std::function<glm::vec4(const std::vector<AttributeValue>&)> fragmentShader) {
 	this->fragmentShader = fragmentShader;
 }

@@ -34,6 +34,7 @@ add_executable(software_rasterizer
 	src/renderer/Rasterizer.h
 	src/renderer/Attribute.h
 	src/renderer/Mesh.h
+	src/renderer/VertexShaderOutput.h
 )
 target_link_libraries(software_rasterizer PRIVATE SDL3::SDL3)
 target_link_libraries(software_rasterizer PRIVATE glm::glm)
