@@ -3,11 +3,11 @@
 
 #include <vector>
 
-#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
 
 
 struct VertexShaderOutput {
-	glm::vec2 position;
+	glm::vec3 position;
 	std::vector<AttributeValue> attributes;
 };
 

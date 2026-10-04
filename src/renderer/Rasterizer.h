@@ -16,6 +16,8 @@ private:
 	std::function<VertexShaderOutput(std::vector<AttributeValue>&)> vertexShader;
 	std::function<glm::vec4(std::vector<AttributeValue>&)> fragmentShader;
 
+	bool depthTestEnabled;
+
 	AttributeValue interpolateAttribute(const AttributeValue& v0, const AttributeValue& v1, const AttributeValue& v2, float l0, float l1, float l2) const;
 
 public:
@@ -27,6 +29,9 @@ public:
 
 	void setVertexShader(std::function<VertexShaderOutput(const std::vector<AttributeValue>&)> vertexShader);
 	void setFragmentShader(std::function<glm::vec4(const std::vector<AttributeValue>&)> fragmentShader);
+
+	void enableDepthTest() { depthTestEnabled = true; };
+	void disableDepthTest() { depthTestEnabled = true; };
 };
 
 

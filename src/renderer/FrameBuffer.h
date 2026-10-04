@@ -6,12 +6,18 @@
 
 
 class FrameBuffer {
-public:
+private:
 	int width;
 	int height;
-	std::vector<uint32_t> data;
+
+public:
+	std::vector<uint32_t> colorAttachment;
+	std::vector<float> depthAttachment;
 
 	FrameBuffer(int width, int height);
+
+	void createColorAttachment();
+	void createDepthAttachment();
 
 	void resize(int width, int height);
 

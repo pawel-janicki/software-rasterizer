@@ -12,9 +12,10 @@ int main() {
 	window.setResizable(true);
 
 	Rasterizer rasterizer(window.getFrameBuffer());
+	rasterizer.enableDepthTest();
 
 	rasterizer.setVertexShader([](const std::vector<AttributeValue>& attributes) {
-		glm::vec2 position = std::get<glm::vec2>(attributes[0]);
+		glm::vec3 position = std::get<glm::vec3>(attributes[0]);
 		glm::vec3 color = std::get<glm::vec3>(attributes[1]);
 
 		std::vector<AttributeValue> out = {color};
@@ -26,8 +27,8 @@ int main() {
 		return glm::vec4(color, 1);
 	});
 
-	Attribute positions(2, std::vector<float>{100, 100, 1180, 100, 100, 620, 100, 620, 1180, 100, 1180, 620});
-	Attribute colors(3, std::vector<float>{1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0});
+	Attribute positions(3, std::vector<float>{100, 100, 0.5f, 1180, 100, 0.5f, 100, 620, 0.5f, 100, 100, 0.9f, 1180, 100, 0.9f, 100, 620, 0.9f});
+	Attribute colors(3, std::vector<float>{1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 	Mesh mesh({positions, colors});
 	int triangleCount = positions.data.size() / positions.dimensions / 3;
 

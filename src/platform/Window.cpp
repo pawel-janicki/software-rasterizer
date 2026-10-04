@@ -9,6 +9,9 @@ Window::Window(const char* title, int width, int height) : frameBuffer(width, he
 	this->width = width;
 	this->height = height;
 
+	frameBuffer.createColorAttachment();
+	frameBuffer.createDepthAttachment();
+
 	if (!SDL_Init(SDL_INIT_VIDEO))
 		throw std::runtime_error(std::format("ERROR >> Could not initialize SDL! SDL error: {}", SDL_GetError()));
 
@@ -65,7 +68,7 @@ void Window::render() const {
 	if (width == 0 || height == 0)
 		return;
 
-	SDL_UpdateTexture(texture, nullptr, frameBuffer.data.data(), width * sizeof(uint32_t));
+	SDL_UpdateTexture(texture, nullptr, frameBuffer.colorAttachment.data(), width * sizeof(uint32_t));
 	SDL_RenderClear(renderer);
 	SDL_RenderTexture(renderer, texture, nullptr, nullptr);
 	SDL_RenderPresent(renderer);

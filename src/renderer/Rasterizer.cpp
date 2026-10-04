@@ -9,7 +9,7 @@
 Rasterizer::Rasterizer(FrameBuffer &frameBuffer) : frameBuffer(frameBuffer) { }
 
 void Rasterizer::clear(uint32_t color) const {
-	std::ranges::fill(frameBuffer.data.begin(), frameBuffer.data.end(), color);
+	std::ranges::fill(frameBuffer.colorAttachment.begin(), frameBuffer.colorAttachment.end(), color);
 }
 
 void Rasterizer::setPixel(int x, int y, glm::vec4 color) const {
@@ -18,7 +18,7 @@ void Rasterizer::setPixel(int x, int y, glm::vec4 color) const {
 	uint8_t b = static_cast<uint8_t>(std::clamp(color.b, 0.0f, 1.0f) * 255);
 	uint8_t a = static_cast<uint8_t>(std::clamp(color.a, 0.0f, 1.0f) * 255);
 
-	frameBuffer.data[y * frameBuffer.width + x] = (r << 24) | (g << 16) | (b << 8) | a;
+	frameBuffer.colorAttachment[y * frameBuffer.getWidth() + x] = (r << 24) | (g << 16) | (b << 8) | a;
 }
 
 void Rasterizer::drawMesh(const Mesh& mesh, int triangleCount) const {
@@ -84,6 +84,15 @@ void Rasterizer::drawMesh(const Mesh& mesh, int triangleCount) const {
 					float l0 = det12 / det012;
 					float l1 = det20 / det012;
 					float l2 = det01 / det012;
+
+					if (depthTestEnabled) {
+						float depth = v0Output.position.z * l0 + v1Output.position.z * l1 + v2Output.position.z * l2;
+
+						if (frameBuffer.depthAttachment[y * frameBuffer.getWidth() + x] < depth)
+							continue;
+
+						frameBuffer.depthAttachment[y * frameBuffer.getWidth() + x] = depth;
+					}
 
 					for (int j = 0; j < v0Output.attributes.size(); j++) {
 						fragmentAttributes[j] = interpolateAttribute(v0Output.attributes[j], v1Output.attributes[j], v2Output.attributes[j], l0, l1, l2);
