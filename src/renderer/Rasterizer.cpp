@@ -12,6 +12,10 @@ void Rasterizer::clear(uint32_t color) const {
 	std::ranges::fill(frameBuffer.colorAttachment.begin(), frameBuffer.colorAttachment.end(), color);
 }
 
+void Rasterizer::clearDepth() const {
+	std::ranges::fill(frameBuffer.depthAttachment.begin(), frameBuffer.depthAttachment.end(), 1.0f);
+}
+
 void Rasterizer::setPixel(int x, int y, glm::vec4 color) const {
 	uint8_t r = static_cast<uint8_t>(std::clamp(color.r, 0.0f, 1.0f) * 255);
 	uint8_t g = static_cast<uint8_t>(std::clamp(color.g, 0.0f, 1.0f) * 255);
@@ -53,9 +57,13 @@ void Rasterizer::drawMesh(const Mesh& mesh, int triangleCount) const {
 		VertexShaderOutput v1Output = vertexShader(v1Attributes);
 		VertexShaderOutput v2Output = vertexShader(v2Attributes);
 
-		glm::vec2 v0 = v0Output.position;
-		glm::vec2 v1 = v1Output.position;
-		glm::vec2 v2 = v2Output.position;
+		glm::vec3 ndc0 = v0Output.position / v0Output.position.w;
+		glm::vec3 ndc1 = v1Output.position / v1Output.position.w;
+		glm::vec3 ndc2 = v2Output.position / v2Output.position.w;
+
+		glm::vec2 v0 = ndcToScreen(ndc0);
+		glm::vec2 v1 = ndcToScreen(ndc1);
+		glm::vec2 v2 = ndcToScreen(ndc2);
 
 		int minX = std::max(0, static_cast<int>(std::min({v0.x, v1.x, v2.x})));
 		int maxX = std::min(frameBuffer.getWidth(), static_cast<int>(std::max({v0.x, v1.x, v2.x})));
@@ -66,7 +74,8 @@ void Rasterizer::drawMesh(const Mesh& mesh, int triangleCount) const {
 		bool ccw = det012 < 0;
 		if (ccw) {
 			std::swap(v1, v2);
-			std::swap(v1Output.attributes, v2Output.attributes);
+			std::swap(ndc1, ndc2);
+			std::swap(v1Output, v2Output);
 			det012 = -det012;
 		}
 
@@ -86,7 +95,8 @@ void Rasterizer::drawMesh(const Mesh& mesh, int triangleCount) const {
 					float l2 = det01 / det012;
 
 					if (depthTestEnabled) {
-						float depth = v0Output.position.z * l0 + v1Output.position.z * l1 + v2Output.position.z * l2;
+						float ndcDepth = ndc0.z * l0 + ndc1.z * l1 + ndc2.z * l2;
+						float depth = ndcDepth * 0.5f + 0.5f;
 
 						if (frameBuffer.depthAttachment[y * frameBuffer.getWidth() + x] < depth)
 							continue;
@@ -103,6 +113,10 @@ void Rasterizer::drawMesh(const Mesh& mesh, int triangleCount) const {
 			}
 		}
 	}
+}
+
+glm::vec2 Rasterizer::ndcToScreen(glm::vec3 ndc) const {
+	return glm::vec2((ndc.x * 0.5f + 0.5f) * frameBuffer.getWidth(), (1.0f - (ndc.y * 0.5f + 0.5f)) * frameBuffer.getHeight());
 }
 
 AttributeValue Rasterizer::interpolateAttribute(const AttributeValue& v0, const AttributeValue& v1, const AttributeValue& v2, float l0, float l1, float l2) const {

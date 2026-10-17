@@ -1,5 +1,7 @@
 #include <format>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include "renderer/Rasterizer.h"
 #include "platform/Window.h"
 #include "renderer/Attribute.h"
@@ -14,9 +16,15 @@ int main() {
 	Rasterizer rasterizer(window.getFrameBuffer());
 	rasterizer.enableDepthTest();
 
-	rasterizer.setVertexShader([](const std::vector<AttributeValue>& attributes) {
-		glm::vec3 position = std::get<glm::vec3>(attributes[0]);
+	glm::mat4 projectionMatrix = glm::perspective(glm::radians(70.0f), window.getWidth() / static_cast<float>(window.getHeight()), 0.1f, 100.0f);
+	glm::mat4 viewMatrix = glm::inverse(glm::translate(glm::mat4(1), glm::vec3(0.0f, 0.0f, 0.0f)));
+	glm::mat4 transformationMatrix = glm::translate(glm::mat4(1), glm::vec3(0.0f, 0.0f, -3.0f));
+
+	rasterizer.setVertexShader([&projectionMatrix, &viewMatrix, &transformationMatrix](const std::vector<AttributeValue>& attributes) {
+		glm::vec3 vertexPosition = std::get<glm::vec3>(attributes[0]);
 		glm::vec3 color = std::get<glm::vec3>(attributes[1]);
+
+		glm::vec4 position = projectionMatrix * viewMatrix * transformationMatrix * glm::vec4(vertexPosition, 1.0f);
 
 		std::vector<AttributeValue> out = {color};
 		return VertexShaderOutput(position, out);
@@ -24,11 +32,11 @@ int main() {
 
 	rasterizer.setFragmentShader([](const std::vector<AttributeValue>& attributes) {
 		glm::vec3 color = std::get<glm::vec3>(attributes[0]);
-		return glm::vec4(color, 1);
+		return glm::vec4(color, 1.0f);
 	});
 
-	Attribute positions(3, std::vector<float>{100, 100, 0.5f, 1180, 100, 0.5f, 100, 620, 0.5f, 100, 100, 0.9f, 1180, 100, 0.9f, 100, 620, 0.9f});
-	Attribute colors(3, std::vector<float>{1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+	Attribute positions(3, std::vector<float>{-1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f});
+	Attribute colors(3, std::vector<float>{1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f});
 	Mesh mesh({positions, colors});
 	int triangleCount = positions.data.size() / positions.dimensions / 3;
 
@@ -53,7 +61,11 @@ int main() {
 
 		window.pollEvents();
 
+		projectionMatrix = glm::perspective(glm::radians(70.0f), window.getWidth() / static_cast<float>(window.getHeight()), 0.1f, 100.0f);
+		transformationMatrix = glm::rotate(transformationMatrix, glm::radians(deltaTime * 30.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
 		rasterizer.clear(0xFFFFFFFF);
+		rasterizer.clearDepth();
 		rasterizer.drawMesh(mesh, triangleCount);
 
 		window.render();

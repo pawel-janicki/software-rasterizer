@@ -19,11 +19,14 @@ private:
 	bool depthTestEnabled;
 
 	AttributeValue interpolateAttribute(const AttributeValue& v0, const AttributeValue& v1, const AttributeValue& v2, float l0, float l1, float l2) const;
+	glm::vec2 ndcToScreen(glm::vec3 ndc) const;
 
 public:
 	Rasterizer(FrameBuffer& frameBuffer);
 
 	void clear(uint32_t color) const;
+	void clearDepth() const;
+
 	void setPixel(int x, int y, glm::vec4 color) const;
 	void drawMesh(const Mesh& mesh, int triangleCount) const;
 
