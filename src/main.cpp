@@ -8,6 +8,8 @@
 #include "renderer/Mesh.h"
 #include "renderer/VertexShaderOutput.h"
 #include "SDL3/SDL_timer.h"
+#include "texture/Texture.h"
+#include "texture/TextureLoader.h"
 
 int main() {
 	Window window("Software Rasterizer", 1280, 720);
@@ -20,24 +22,26 @@ int main() {
 	glm::mat4 viewMatrix = glm::inverse(glm::translate(glm::mat4(1), glm::vec3(0.0f, 0.0f, 0.0f)));
 	glm::mat4 transformationMatrix = glm::translate(glm::mat4(1), glm::vec3(0.0f, 0.0f, -3.0f));
 
+	Texture texture = TextureLoader::loadTexture("assets/texture.png");
+
 	rasterizer.setVertexShader([&projectionMatrix, &viewMatrix, &transformationMatrix](const std::vector<AttributeValue>& attributes) {
 		glm::vec3 vertexPosition = std::get<glm::vec3>(attributes[0]);
-		glm::vec3 color = std::get<glm::vec3>(attributes[1]);
+		glm::vec2 uv = std::get<glm::vec2>(attributes[1]);
 
 		glm::vec4 position = projectionMatrix * viewMatrix * transformationMatrix * glm::vec4(vertexPosition, 1.0f);
 
-		std::vector<AttributeValue> out = {color};
+		std::vector<AttributeValue> out = {uv};
 		return VertexShaderOutput(position, out);
 	});
 
-	rasterizer.setFragmentShader([](const std::vector<AttributeValue>& attributes) {
-		glm::vec3 color = std::get<glm::vec3>(attributes[0]);
-		return glm::vec4(color, 1.0f);
+	rasterizer.setFragmentShader([&texture](const std::vector<AttributeValue>& attributes) {
+		glm::vec2 uv = std::get<glm::vec2>(attributes[0]);
+		return texture.sample(uv);
 	});
 
 	Attribute positions(3, std::vector<float>{-1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f});
-	Attribute colors(3, std::vector<float>{1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f});
-	Mesh mesh({positions, colors});
+	Attribute uvs(2, std::vector<float>{0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f});
+	Mesh mesh({positions, uvs});
 	int triangleCount = positions.data.size() / positions.dimensions / 3;
 
 	uint64_t lastTime = SDL_GetTicksNS();
@@ -64,7 +68,7 @@ int main() {
 		projectionMatrix = glm::perspective(glm::radians(70.0f), window.getWidth() / static_cast<float>(window.getHeight()), 0.1f, 100.0f);
 		transformationMatrix = glm::rotate(transformationMatrix, glm::radians(deltaTime * 30.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-		rasterizer.clear(0xFFFFFFFF);
+		rasterizer.clear(0x404040FF);
 		rasterizer.clearDepth();
 		rasterizer.drawMesh(mesh, triangleCount);
 

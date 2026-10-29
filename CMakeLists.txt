@@ -35,6 +35,15 @@ add_executable(software_rasterizer
 	src/renderer/Attribute.h
 	src/renderer/Mesh.h
 	src/renderer/VertexShaderOutput.h
+	src/texture/TextureLoader.cpp
+	src/texture/TextureLoader.h
+	src/texture/Texture.cpp
+	src/texture/Texture.h
+)
+add_custom_command(TARGET software_rasterizer POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	"${CMAKE_SOURCE_DIR}/assets"
+	"$<TARGET_FILE_DIR:software_rasterizer>/assets"
 )
 target_link_libraries(software_rasterizer PRIVATE SDL3::SDL3)
 target_link_libraries(software_rasterizer PRIVATE glm::glm)
