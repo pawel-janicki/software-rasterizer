@@ -90,9 +90,15 @@ void Rasterizer::drawMesh(const Mesh& mesh, int triangleCount) const {
 				float det20 = glm::cross(v0 - v2, pixel - v2);
 
 				if (det01 >= 0 && det12 >= 0 && det20 >= 0) {
-					float l0 = det12 / det012;
-					float l1 = det20 / det012;
-					float l2 = det01 / det012;
+					float l0 = det12 / det012 / v0Output.position.w;
+					float l1 = det20 / det012 / v1Output.position.w;
+					float l2 = det01 / det012 / v2Output.position.w;
+
+					float lSum = l0 + l1 + l2;
+
+					l0 /= lSum;
+					l1 /= lSum;
+					l2 /= lSum;
 
 					if (depthTestEnabled) {
 						float ndcDepth = ndc0.z * l0 + ndc1.z * l1 + ndc2.z * l2;
