@@ -23,6 +23,7 @@ int main() {
 	glm::mat4 transformationMatrix = glm::translate(glm::mat4(1), glm::vec3(0.0f, 0.0f, -3.0f));
 
 	Texture texture = TextureLoader::loadTexture("assets/texture.png");
+	texture.setWrap(TextureWrap::Repeat);
 
 	rasterizer.setVertexShader([&projectionMatrix, &viewMatrix, &transformationMatrix](const std::vector<AttributeValue>& attributes) {
 		glm::vec3 vertexPosition = std::get<glm::vec3>(attributes[0]);
@@ -40,7 +41,7 @@ int main() {
 	});
 
 	Attribute positions(3, std::vector<float>{-1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f});
-	Attribute uvs(2, std::vector<float>{0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f});
+	Attribute uvs(2, std::vector<float>{0.0f, 0.0f, 4.0f, 0.0f, 0.0f, 4.0f});
 	Mesh mesh({positions, uvs});
 	int triangleCount = positions.data.size() / positions.dimensions / 3;
 
